@@ -1,0 +1,32 @@
+{
+  "name": "ledger-ai",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.26.2",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev:db": "docker compose -f infra/docker-compose.yml --env-file infra/.env up -d postgres",
+    "dev:db:down": "docker compose -f infra/docker-compose.yml --env-file infra/.env down",
+    "dev:backend": "cd services/backend && ./gradlew bootRun",
+    "dev:bff": "pnpm --filter @ledger-ai/bff dev",
+    "dev:desktop": "pnpm --filter @ledger-ai/desktop dev",
+    "dev": "pnpm dev:db && concurrently -n backend,bff,desktop -c blue,magenta,cyan \"pnpm dev:backend\" \"pnpm dev:bff\" \"pnpm dev:desktop\"",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "concurrently": "^9.0.1",
+    "eslint": "^9.14.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^17.6.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}
