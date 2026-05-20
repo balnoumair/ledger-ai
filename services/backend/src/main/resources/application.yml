@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: ledger-ai-backend
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:ledger}
+    username: ${POSTGRES_USER:ledger}
+    password: ${POSTGRES_PASSWORD:ledger}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+plaid:
+  client-id: ${PLAID_CLIENT_ID:}
+  secret: ${PLAID_SECRET:}
+  env: ${PLAID_ENV:sandbox}
+
+ledger:
+  local-user-id: 00000000-0000-0000-0000-000000000001
+  local-user-email: me@localhost
+
+logging:
+  level:
+    root: INFO
+    ai.ledger: INFO
+    org.springframework.web: INFO
