@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.transaction.annotation.Transactional
 import retrofit2.Call
 import retrofit2.Response
 import org.mockito.Mockito.mock as mockOf
@@ -31,6 +32,7 @@ import org.mockito.Mockito.mock as mockOf
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Transactional
 class EndpointSmokeTest {
     @Autowired private lateinit var mvc: MockMvc
 
@@ -45,7 +47,8 @@ class EndpointSmokeTest {
         whenever(call.execute()).thenReturn(Response.success(resp))
         whenever(plaidApi.linkTokenCreate(any())).thenReturn(call)
 
-        mvc.perform(post("/internal/plaid/link-token"))
+        mvc
+            .perform(post("/internal/plaid/link-token"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.link_token").value("link-sandbox-test"))
             // Critically: access_token must never appear in any response.
@@ -54,11 +57,12 @@ class EndpointSmokeTest {
 
     @Test
     fun `exchange validates missing public_token`() {
-        mvc.perform(
-            post("/internal/plaid/exchange")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{}"""),
-        ).andExpect(status().isBadRequest)
+        mvc
+            .perform(
+                post("/internal/plaid/exchange")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{}"""),
+            ).andExpect(status().isBadRequest)
     }
 
     @Test
@@ -90,19 +94,19 @@ class EndpointSmokeTest {
         whenever(accountsCall.execute()).thenReturn(Response.success(accountsResp))
         whenever(plaidApi.accountsGet(any())).thenReturn(accountsCall)
 
-        mvc.perform(
-            post("/internal/plaid/exchange")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "public_token": "public-sandbox-fake",
-                      "institution": { "name": "First Platypus Bank", "institution_id": "ins_109508" }
-                    }
-                    """.trimIndent(),
-                ),
-        )
-            .andExpect(status().isOk)
+        mvc
+            .perform(
+                post("/internal/plaid/exchange")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "public_token": "public-sandbox-fake",
+                          "institution": { "name": "First Platypus Bank", "institution_id": "ins_109508" }
+                        }
+                        """.trimIndent(),
+                    ),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$[0].plaid_account_id").value("acc-1"))
             .andExpect(jsonPath("$[0].institution_name").value("First Platypus Bank"))
             .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("access_token"))))
@@ -110,7 +114,8 @@ class EndpointSmokeTest {
 
     @Test
     fun `accounts list is empty when nothing linked`() {
-        mvc.perform(get("/internal/accounts"))
+        mvc
+            .perform(get("/internal/accounts"))
             .andExpect(status().isOk)
             .andExpect(content().json("[]"))
     }

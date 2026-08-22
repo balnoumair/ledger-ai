@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ConnectBank } from './screens/ConnectBank';
 import { PickAccounts } from './screens/PickAccounts';
-import { AllSet } from './screens/AllSet';
+import { Dashboard } from './screens/Dashboard';
 import { listAccounts } from './lib/api';
 import type { PlaidInstitutionMeta } from './lib/api';
 import './styles/app.css';
@@ -67,7 +67,7 @@ export function App() {
           onConfirmed={handleConfirmed}
         />
       )}
-      {route.name === 'done' && <AllSet onAddAnother={() => setRoute({ name: 'connect' })} />}
+      {route.name === 'done' && <Dashboard onAddAnother={() => setRoute({ name: 'connect' })} />}
     </div>
   );
 }

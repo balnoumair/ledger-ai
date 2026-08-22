@@ -77,6 +77,49 @@ describe('BFF routes', () => {
     expect(await res.json()).toEqual([]);
   });
 
+  it('POST /api/accounts/refresh forwards to backend', async () => {
+    const { app, fetchImpl } = makeApp(() => jsonRes(200, [{ id: 'a1', current_balance: 90 }]));
+    const res = await app.request('/api/accounts/refresh', { method: 'POST' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([{ id: 'a1', current_balance: 90 }]);
+    const [calledUrl] = (fetchImpl as unknown as { mock: { calls: [string][] } }).mock.calls[0]!;
+    expect(calledUrl).toBe('http://backend.test/internal/accounts/refresh');
+  });
+
+  it('GET /api/transactions forwards with sanitized limit', async () => {
+    const { app, fetchImpl } = makeApp(() => jsonRes(200, []));
+    const res = await app.request('/api/transactions?limit=25');
+    expect(res.status).toBe(200);
+    const [calledUrl] = (fetchImpl as unknown as { mock: { calls: [string][] } }).mock.calls[0]!;
+    expect(calledUrl).toBe('http://backend.test/internal/transactions?limit=25');
+
+    // Bogus limit is dropped rather than forwarded.
+    const { app: app2, fetchImpl: fetch2 } = makeApp(() => jsonRes(200, []));
+    await app2.request('/api/transactions?limit=abc');
+    const [calledUrl2] = (fetch2 as unknown as { mock: { calls: [string][] } }).mock.calls[0]!;
+    expect(calledUrl2).toBe('http://backend.test/internal/transactions');
+  });
+
+  it('POST /api/transactions/sync forwards to backend', async () => {
+    const { app, fetchImpl } = makeApp(() =>
+      jsonRes(200, { added: 3, modified: 0, removed: 0, total: 3 }),
+    );
+    const res = await app.request('/api/transactions/sync', { method: 'POST' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ added: 3, modified: 0, removed: 0, total: 3 });
+    const [calledUrl] = (fetchImpl as unknown as { mock: { calls: [string][] } }).mock.calls[0]!;
+    expect(calledUrl).toBe('http://backend.test/internal/transactions/sync');
+  });
+
+  it('GET /api/summary forwards to backend', async () => {
+    const { app, fetchImpl } = makeApp(() => jsonRes(200, { net_worth: 100 }));
+    const res = await app.request('/api/summary');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ net_worth: 100 });
+    const [calledUrl] = (fetchImpl as unknown as { mock: { calls: [string][] } }).mock.calls[0]!;
+    expect(calledUrl).toBe('http://backend.test/internal/summary');
+  });
+
   it('PATCH /api/accounts/:id validates body and forwards', async () => {
     const { app, fetchImpl } = makeApp(() => jsonRes(200, { id: 'x', included: false }));
     const bad = await app.request('/api/accounts/123', {

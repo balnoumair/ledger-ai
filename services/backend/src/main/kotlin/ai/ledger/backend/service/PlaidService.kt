@@ -8,6 +8,7 @@ import ai.ledger.backend.repo.PlaidItemRepository
 import ai.ledger.backend.web.dto.AccountResponse
 import ai.ledger.backend.web.dto.InstitutionMeta
 import ai.ledger.backend.web.dto.LinkTokenResponse
+import com.plaid.client.model.AccountsBalanceGetRequest
 import com.plaid.client.model.AccountsGetRequest
 import com.plaid.client.model.CountryCode
 import com.plaid.client.model.ItemPublicTokenExchangeRequest
@@ -19,7 +20,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
-import java.util.UUID
 
 @Service
 class PlaidService(
@@ -30,7 +30,11 @@ class PlaidService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun createLinkToken(userId: UUID = ledgerProperties.localUserId): LinkTokenResponse {
+    fun createLinkToken(): LinkTokenResponse {
+        // Resolved inside the method body: default arguments that read injected
+        // fields NPE under CGLIB proxies (@Transactional), because the proxy's
+        // own fields are never initialized.
+        val userId = ledgerProperties.localUserId
         val user = LinkTokenCreateRequestUser().clientUserId(userId.toString())
         val request =
             LinkTokenCreateRequest()
@@ -56,8 +60,8 @@ class PlaidService(
     fun exchangePublicToken(
         publicToken: String,
         institution: InstitutionMeta?,
-        userId: UUID = ledgerProperties.localUserId,
     ): List<AccountResponse> {
+        val userId = ledgerProperties.localUserId
         val exchangeReq = ItemPublicTokenExchangeRequest().publicToken(publicToken)
         val exchangeResp = plaidApi.itemPublicTokenExchange(exchangeReq).execute()
         if (!exchangeResp.isSuccessful || exchangeResp.body() == null) {
@@ -114,9 +118,41 @@ class PlaidService(
         return persisted.map { it.toResponse(item.institutionName) }
     }
 
+    /**
+     * Pulls fresh balances from Plaid for every linked item and updates the
+     * stored accounts. Returns the full refreshed account list.
+     */
+    @Transactional
+    fun refreshBalances(): List<AccountResponse> {
+        val items = itemRepository.findAllByUserId(ledgerProperties.localUserId)
+        val refreshed = mutableListOf<AccountResponse>()
+        for (item in items) {
+            val request = AccountsBalanceGetRequest().accessToken(item.accessToken)
+            val response = plaidApi.accountsBalanceGet(request).execute()
+            if (!response.isSuccessful || response.body() == null) {
+                val errBody = response.errorBody()?.string()
+                log.error("Plaid accountsBalanceGet failed: code={}, body={}", response.code(), errBody)
+                error("Failed to refresh Plaid balances (code=${response.code()})")
+            }
+            val byPlaidId =
+                accountRepository
+                    .findAllByItemIdIn(listOf(item.id))
+                    .associateBy { it.plaidAccountId }
+            for (acct in response.body()!!.accounts) {
+                val existing = byPlaidId[acct.accountId] ?: continue
+                val balances = acct.balances
+                existing.currentBalance = balances?.current?.let { BigDecimal.valueOf(it) }
+                existing.availableBalance = balances?.available?.let { BigDecimal.valueOf(it) }
+                existing.isoCurrencyCode = balances?.isoCurrencyCode ?: existing.isoCurrencyCode
+                refreshed += accountRepository.save(existing).toResponse(item.institutionName)
+            }
+        }
+        return refreshed
+    }
+
     @Transactional(readOnly = true)
-    fun listAccountsForUser(userId: UUID = ledgerProperties.localUserId): List<AccountResponse> {
-        val items = itemRepository.findAllByUserId(userId)
+    fun listAccountsForUser(): List<AccountResponse> {
+        val items = itemRepository.findAllByUserId(ledgerProperties.localUserId)
         if (items.isEmpty()) return emptyList()
         val itemById = items.associateBy { it.id }
         val accounts = accountRepository.findAllByItemIdIn(itemById.keys)

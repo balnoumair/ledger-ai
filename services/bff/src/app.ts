@@ -93,6 +93,45 @@ export function createApp(deps: AppDeps = { backendUrl: env.backendUrl, corsOrig
     });
   });
 
+  app.post('/api/accounts/refresh', async () => {
+    const res = await doFetch(`${deps.backendUrl}/internal/accounts/refresh`, { method: 'POST' });
+    const text = await res.text();
+    return new Response(text, {
+      status: res.status,
+      headers: { 'content-type': res.headers.get('content-type') ?? 'application/json' },
+    });
+  });
+
+  app.get('/api/transactions', async (c) => {
+    const limitRaw = c.req.query('limit');
+    const limit = limitRaw !== undefined ? Number.parseInt(limitRaw, 10) : NaN;
+    const query = Number.isFinite(limit) && limit > 0 ? `?limit=${Math.min(limit, 500)}` : '';
+    const res = await doFetch(`${deps.backendUrl}/internal/transactions${query}`);
+    const text = await res.text();
+    return new Response(text, {
+      status: res.status,
+      headers: { 'content-type': res.headers.get('content-type') ?? 'application/json' },
+    });
+  });
+
+  app.post('/api/transactions/sync', async () => {
+    const res = await doFetch(`${deps.backendUrl}/internal/transactions/sync`, { method: 'POST' });
+    const text = await res.text();
+    return new Response(text, {
+      status: res.status,
+      headers: { 'content-type': res.headers.get('content-type') ?? 'application/json' },
+    });
+  });
+
+  app.get('/api/summary', async () => {
+    const res = await doFetch(`${deps.backendUrl}/internal/summary`);
+    const text = await res.text();
+    return new Response(text, {
+      status: res.status,
+      headers: { 'content-type': res.headers.get('content-type') ?? 'application/json' },
+    });
+  });
+
   app.patch('/api/accounts/:id', zValidator('json', updateIncludedSchema), async (c) => {
     const id = c.req.param('id');
     const body = c.req.valid('json');

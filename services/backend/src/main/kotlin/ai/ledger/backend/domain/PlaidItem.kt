@@ -22,6 +22,11 @@ class PlaidItem(
     var institutionId: String? = null,
     @Column(name = "user_id", nullable = false)
     var userId: UUID,
+    /** Plaid /transactions/sync cursor; null until the first sync. */
+    @Column(name = "transactions_cursor")
+    var transactionsCursor: String? = null,
+    @Column(name = "last_synced_at")
+    var lastSyncedAt: Instant? = null,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now(),
 )

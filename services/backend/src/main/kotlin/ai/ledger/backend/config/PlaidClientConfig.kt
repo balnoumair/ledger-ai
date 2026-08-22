@@ -21,9 +21,10 @@ class PlaidClientConfig {
                 "plaidVersion" to "2020-09-14",
             )
         val client = ApiClient(keys)
+        // Plaid retired the Development environment; only Production and
+        // Sandbox exist in plaid-java 27.
         when (properties.env.lowercase()) {
             "production" -> client.setPlaidAdapter(ApiClient.Production)
-            "development" -> client.setPlaidAdapter(ApiClient.Development)
             else -> client.setPlaidAdapter(ApiClient.Sandbox)
         }
         return client
