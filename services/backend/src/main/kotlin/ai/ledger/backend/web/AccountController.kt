@@ -7,6 +7,7 @@ import ai.ledger.backend.web.dto.UpdateAccountIncludedRequest
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -20,6 +21,9 @@ class AccountController(
 ) {
     @GetMapping
     fun list(): List<AccountResponse> = plaidService.listAccountsForUser()
+
+    @PostMapping("/refresh")
+    fun refreshBalances(): List<AccountResponse> = plaidService.refreshBalances()
 
     @PatchMapping("/{id}")
     fun updateIncluded(
