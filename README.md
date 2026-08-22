@@ -11,7 +11,6 @@ apps/desktop/        Electron + React + TypeScript + Vite
 services/bff/        Hono + TypeScript on Node (thin pass-through)
 services/backend/    Spring Boot + Kotlin (owns Plaid + Postgres)
 infra/               docker-compose.yml for local Postgres
-openspec/            change proposals, specs, design docs
 ```
 
 ## Prerequisites
@@ -36,6 +35,16 @@ cp apps/desktop/.env.example apps/desktop/.env
 The only one that needs real values for the link flow to work is `services/backend/.env` (your Plaid Sandbox `PLAID_CLIENT_ID` and `PLAID_SECRET`).
 
 ## Dev-stack startup
+
+Shortcut — one-time setup, then start everything:
+
+```bash
+make setup   # generates the Gradle wrapper + copies every .env.example
+# fill in Plaid Sandbox credentials in services/backend/.env, then:
+make dev     # starts Postgres, backend, BFF, and desktop together
+```
+
+Or run it manually:
 
 ```bash
 # 1. Install JS deps
@@ -82,12 +91,5 @@ cd services/backend && ./gradlew check   # Kotlin: ktlint via spotless + tests
 - **Plaid Link in Electron** relies on the default Electron `session` cookies. If you've customized `session.defaultSession` to strip cookies, the OAuth flow (Tartan Bank etc.) will loop.
 
 ## Design rationale
-
-See [`openspec/changes/bootstrap-plaid-onboarding/`](openspec/changes/bootstrap-plaid-onboarding/):
-
-- [`proposal.md`](openspec/changes/bootstrap-plaid-onboarding/proposal.md) — what's in / out of scope and why
-- [`design.md`](openspec/changes/bootstrap-plaid-onboarding/design.md) — every architectural decision with the alternative considered
-- [`specs/`](openspec/changes/bootstrap-plaid-onboarding/specs) — the requirements this change satisfies
-- [`tasks.md`](openspec/changes/bootstrap-plaid-onboarding/tasks.md) — the task list this implementation worked through
 
 The Aurora visual system the desktop app uses comes from [`docs/design/personal-ai-chekcer/`](docs/design/personal-ai-chekcer/).
